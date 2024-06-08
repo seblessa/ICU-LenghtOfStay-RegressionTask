@@ -20,7 +20,7 @@ def classify_columns(df):
 
         if first_non_null is not None:
             value = first_non_null[0]
-            if isinstance(value, (str, int, float)):  # Ensure the value is a basic data type suitable for conversion
+            if isinstance(value, (str, int, float)):  # Ensure the value is a basic datasets type suitable for conversion
                 try:
                     # First, try to convert the value to int
                     _ = int(value)
@@ -69,7 +69,7 @@ def replace_empty_list(value_list):
 
 
 def plot_graph(df, group_by_column, aggregate_column, agg_func, plot_title, x_label, y_label):
-    # Aggregate the data
+    # Aggregate the datasets
     aggregated_data = df.groupBy(group_by_column).agg(agg_func(aggregate_column).alias('agg_result')).collect()
 
     # Extracting results into lists for plotting
