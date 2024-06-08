@@ -1,6 +1,5 @@
 from pyspark.sql import functions as F
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 def print_missing_value_counts(df):
@@ -25,19 +24,16 @@ def mean_residuals(predictions, actuals):
 def print_metrics(evaluator, predictions):
     # Mean of differences between predicted and actual values
     mean_residual = mean_residuals(predictions.select("prediction"), predictions.select("LOS"))
-    print(f"Mean of the difference between predicted 'LOS' and actual 'LOS': {mean_residual}.")
-
-    # R2 Score
     r2 = evaluator.evaluate(predictions, {evaluator.metricName: "r2"})
-    print(f"R2 score, indicating the proportion of variance in 'LOS' that is predictable from the features: {r2:.2f}")
-
-    # Root Mean Squared Error (RMSE)
     rmse = evaluator.evaluate(predictions, {evaluator.metricName: "rmse"})
-    print(f"Root Mean Squared Error, showing the average magnitude of the prediction errors in 'LOS': {rmse:.2f}")
-
-    # Mean Squared Error (MSE)
     mse = evaluator.evaluate(predictions, {evaluator.metricName: "mse"})
-    print(f"Mean Squared Error, representing the average of the squares of the prediction errors in 'LOS': {mse:.2f}")
+
+    print(
+        f"Mean of the difference between predicted and actual 'LOS': {mean_residual}.\n"
+        f"R2 score (proportion of variance predictable): {r2:.2f}.\n"
+        f"Root Mean Squared Error (average magnitude of errors): {rmse:.2f}.\n"
+        f"Mean Squared Error (average of the squares of errors): {mse:.2f}.\n"
+    )
 
 
 # Define the UDF
