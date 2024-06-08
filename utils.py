@@ -12,16 +12,6 @@ def print_missing_value_counts(df):
 
 
 def mean_residuals(predictions, actuals):
-    """
-    Calculate the mean of residuals between predicted and actual values.
-
-    Args:
-    predictions (DataFrame): DataFrame containing the predictions.
-    actuals (DataFrame): DataFrame containing the actual values.
-
-    Returns:
-    float: The mean of the residuals.
-    """
     # Ensure predictions and actuals are columns of DataFrames
     df = predictions.join(actuals)
     df = df.withColumn('Residual', F.col('prediction') - F.col('LOS'))  # Ensure correct column names are used
@@ -30,27 +20,6 @@ def mean_residuals(predictions, actuals):
     mean_residual = df.select(F.avg('Residual')).first()[0]
 
     return abs(round(mean_residual, 2))
-
-
-def calculate_accuracy(predictions, actuals):
-    """
-    Calculate the Mean Absolute Percentage Error (MAPE) between predicted and actual values.
-
-    Args:
-    predictions (DataFrame): DataFrame containing the predictions.
-    actuals (DataFrame): DataFrame containing the actual values.
-
-    Returns:
-    float: The MAPE value.
-    """
-    # Ensure predictions and actuals are columns of DataFrames
-    df = predictions.join(actuals)
-    df = df.withColumn('APE', F.abs((F.col('LOS') - F.col('prediction')) / F.col('LOS')))
-
-    # Calculate MAPE
-    mape = 100 * df.select(F.avg('APE')).first()[0]
-
-    return round(mape, 2)
 
 
 def print_metrics(evaluator, predictions):
@@ -114,39 +83,4 @@ def plot_graph(df, group_by_column, aggregate_column, agg_func, plot_title, x_la
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.xticks(rotation=45)
-    plt.show()
-
-
-def plot_scatter(y_test, y_pred):
-    pandas_df = y_test.join(y_pred).toPandas()
-    plt.figure(figsize=(10, 6))
-    sns.scatterplot(x=pandas_df['LOS'], y=pandas_df['predicted'])
-    plt.title('Actual vs Predicted Values')
-    plt.xlabel('Actual Values')
-    plt.ylabel('Predicted Values')
-    plt.plot([pandas_df['LOS'].min(), pandas_df['LOS'].max()],
-             [pandas_df['LOS'].min(), pandas_df['LOS'].max()], 'm--')
-    plt.show()
-
-
-def plot_line(y_test, y_pred):
-    pandas_df = y_test.join(y_pred).toPandas().sort_values(by='LOS')
-    plt.figure(figsize=(10, 6))
-    plt.plot(pandas_df['LOS'], label='LOS Values', marker='o')
-    plt.plot(pandas_df['predicted'], label='Predicted Values', marker='x')
-    plt.title('Line Comparison of Actual and Predicted Values')
-    plt.xlabel('Index')
-    plt.ylabel('Values')
-    plt.legend()
-    plt.show()
-
-
-def plot_density(y_test, y_pred):
-    pandas_df = y_test.join(y_pred).toPandas()
-    plt.figure(figsize=(10, 6))
-    sns.kdeplot(pandas_df['LOS'], label='Actual Values', fill=True)
-    sns.kdeplot(pandas_df['predicted'], label='Predicted Values', fill=True)
-    plt.title('Density Plot of Actual and Predicted Values')
-    plt.xlabel('Values')
-    plt.legend()
     plt.show()
