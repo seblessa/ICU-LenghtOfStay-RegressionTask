@@ -27,6 +27,28 @@ def mean_residuals(y_pred, y_test):
     # Calculate and return the mean of residuals
     return residuals.select(F.avg('Residual')).first()[0]
 
+
+def calculate_mape(y_pred, y_test):
+    """
+    Calculate the Mean Absolute Percentage Error (MAPE) between predicted and actual values.
+
+    Args:
+    y_pred (DataFrame): A DataFrame with a column named 'prediction' for predicted values.
+    y_test (DataFrame): A DataFrame with a column for actual values, typically the label or target column.
+
+    Returns:
+    float: The MAPE value.
+    """
+    # Join the predicted and actual values into one DataFrame if they are not already together
+    df = y_pred.withColumnRenamed('prediction', 'y_pred').join(y_test.withColumnRenamed(y_test.columns[0], 'y_true'))
+
+    # Calculate MAPE
+    mape = df.select(
+        (100 * abs(col('y_true') - col('y_pred')) / col('y_true')).alias('abs_percentage_error')
+    ).agg({'abs_percentage_error': 'avg'}).first()[0]
+
+    return mape
+
 def classify_columns(df):
     categorical_cols = []
     numerical_cols = []
