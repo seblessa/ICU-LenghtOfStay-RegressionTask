@@ -10,6 +10,23 @@ def print_missing_value_counts(df):
     null_counts.show(vertical=True)
 
 
+def mean_residuals(y_pred, y_test):
+    """
+    Calculate the mean of residuals between predicted and actual values.
+
+    Args:
+    y_pred (Column): The column of predicted values.
+    y_test (Column): The column of actual values.
+
+    Returns:
+    float: The mean of the residuals.
+    """
+    # Create a DataFrame with residuals
+    residuals = y_pred.withColumn('Residual', y_test - y_pred)
+
+    # Calculate and return the mean of residuals
+    return residuals.select(F.avg('Residual')).first()[0]
+
 def classify_columns(df):
     categorical_cols = []
     numerical_cols = []
