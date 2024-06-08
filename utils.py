@@ -10,44 +10,47 @@ def print_missing_value_counts(df):
     null_counts.show(vertical=True)
 
 
-def mean_residuals(y_pred, y_test):
+def mean_residuals(predictions, actuals):
     """
     Calculate the mean of residuals between predicted and actual values.
 
     Args:
-    y_pred (Column): The column of predicted values.
-    y_test (Column): The column of actual values.
+    predictions (DataFrame): DataFrame containing the predictions.
+    actuals (DataFrame): DataFrame containing the actual values.
 
     Returns:
     float: The mean of the residuals.
     """
-    # Create a DataFrame with residuals
-    residuals = y_pred.withColumn('Residual', y_test - y_pred)
+    # Ensure predictions and actuals are columns of DataFrames
+    df = predictions.join(actuals)
+    df = df.withColumn('Residual', F.col('prediction') - F.col('LOS'))  # Ensure correct column names are used
 
-    # Calculate and return the mean of residuals
-    return residuals.select(F.avg('Residual')).first()[0]
+    # Calculate mean of residuals
+    mean_residual = df.select(F.avg('Residual')).first()[0]
+
+    return abs(round(mean_residual, 2))
 
 
-def calculate_mape(y_pred, y_test):
+def calculate_accuracy(predictions, actuals):
     """
     Calculate the Mean Absolute Percentage Error (MAPE) between predicted and actual values.
 
     Args:
-    y_pred (DataFrame): A DataFrame with a column named 'prediction' for predicted values.
-    y_test (DataFrame): A DataFrame with a column for actual values, typically the label or target column.
+    predictions (DataFrame): DataFrame containing the predictions.
+    actuals (DataFrame): DataFrame containing the actual values.
 
     Returns:
     float: The MAPE value.
     """
-    # Join the predicted and actual values into one DataFrame if they are not already together
-    df = y_pred.withColumnRenamed('prediction', 'y_pred').join(y_test.withColumnRenamed(y_test.columns[0], 'y_true'))
+    # Ensure predictions and actuals are columns of DataFrames
+    df = predictions.join(actuals)
+    df = df.withColumn('APE', F.abs((F.col('LOS') - F.col('prediction')) / F.abs(F.col('LOS'))))
 
     # Calculate MAPE
-    mape = df.select(
-        (100 * abs(col('y_true') - col('y_pred')) / col('y_true')).alias('abs_percentage_error')
-    ).agg({'abs_percentage_error': 'avg'}).first()[0]
+    mape = 100 * (1 - df.select(F.avg('APE')).first()[0])
 
-    return mape
+    return round(mape, 2)
+
 
 def classify_columns(df):
     categorical_cols = []
@@ -59,7 +62,8 @@ def classify_columns(df):
 
         if first_non_null is not None:
             value = first_non_null[0]
-            if isinstance(value, (str, int, float)):  # Ensure the value is a basic datasets type suitable for conversion
+            if isinstance(value,
+                          (str, int, float)):  # Ensure the value is a basic datasets type suitable for conversion
                 try:
                     # First, try to convert the value to int
                     _ = int(value)
@@ -82,13 +86,13 @@ def classify_columns(df):
     return numerical_cols, categorical_cols
 
 
-
 # Define the UDF
 def handle_list(value):
     if isinstance(value, list):
         if len(value) == 1:
             return value[0]
     return value
+
 
 def transform_list(value_list):
     if value_list is None:
@@ -116,7 +120,7 @@ def plot_graph(df, group_by_column, aggregate_column, agg_func, plot_title, x_la
     values = [row['agg_result'] for row in aggregated_data]
 
     # Choose random colors for the bars
-    colors = [plt.cm.tab10(i/len(categories)) for i in range(len(categories))]
+    colors = [plt.cm.tab10(i / len(categories)) for i in range(len(categories))]
 
     # Plotting the bar chart
     plt.figure(figsize=(10, 6))
