@@ -1,5 +1,6 @@
 from pyspark.sql import functions as F
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def print_missing_value_counts(df):
@@ -44,46 +45,30 @@ def calculate_accuracy(predictions, actuals):
     """
     # Ensure predictions and actuals are columns of DataFrames
     df = predictions.join(actuals)
-    df = df.withColumn('APE', F.abs((F.col('LOS') - F.col('prediction')) / F.abs(F.col('LOS'))))
+    df = df.withColumn('APE', F.abs((F.col('LOS') - F.col('prediction')) / F.col('LOS')))
 
     # Calculate MAPE
-    mape = 100 * (1 - df.select(F.avg('APE')).first()[0])
+    mape = 100 * df.select(F.avg('APE')).first()[0]
 
     return round(mape, 2)
 
 
-def classify_columns(df):
-    categorical_cols = []
-    numerical_cols = []
+def print_metrics(evaluator, predictions):
+    # Mean of differences between predicted and actual values
+    mean_residual = mean_residuals(predictions.select("prediction"), predictions.select("LOS"))
+    print(f"Mean of the difference between predicted 'LOS' and actual 'LOS': {mean_residual}.")
 
-    for field in df.schema.fields:
-        column_name = field.name
-        first_non_null = df.filter(df[column_name].isNotNull()).select(column_name).first()
+    # R2 Score
+    r2 = evaluator.evaluate(predictions, {evaluator.metricName: "r2"})
+    print(f"R2 score, indicating the proportion of variance in 'LOS' that is predictable from the features: {r2:.2f}")
 
-        if first_non_null is not None:
-            value = first_non_null[0]
-            if isinstance(value,
-                          (str, int, float)):  # Ensure the value is a basic datasets type suitable for conversion
-                try:
-                    # First, try to convert the value to int
-                    _ = int(value)
-                    numerical_cols.append(column_name)  # Success means it's numerical
-                except ValueError:
-                    try:
-                        # If int fails, try to convert to float
-                        _ = float(value)
-                        numerical_cols.append(column_name)  # Success means it's numerical
-                    except ValueError:
-                        # If both conversions fail, classify as categorical
-                        categorical_cols.append(column_name)
-            else:
-                # Handle non-string, non-numeric types (like lists, dicts, etc.)
-                categorical_cols.append(column_name)
-        else:
-            # If all values are null, consider it categorical for safety
-            categorical_cols.append(column_name)
+    # Root Mean Squared Error (RMSE)
+    rmse = evaluator.evaluate(predictions, {evaluator.metricName: "rmse"})
+    print(f"Root Mean Squared Error, showing the average magnitude of the prediction errors in 'LOS': {rmse:.2f}")
 
-    return numerical_cols, categorical_cols
+    # Mean Squared Error (MSE)
+    mse = evaluator.evaluate(predictions, {evaluator.metricName: "mse"})
+    print(f"Mean Squared Error, representing the average of the squares of the prediction errors in 'LOS': {mse:.2f}")
 
 
 # Define the UDF
@@ -128,42 +113,40 @@ def plot_graph(df, group_by_column, aggregate_column, agg_func, plot_title, x_la
     plt.title(plot_title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
-    plt.xticks(rotation=45)  # Adjust rotation based on category name length
+    plt.xticks(rotation=45)
     plt.show()
 
 
-"""
-def classify_disease_risk(df, disease_col, los_col):
-    # Alias the DataFrame to avoid ambiguity in join operations
-    df_aliased = df.alias("df_main")
+def plot_scatter(y_test, y_pred):
+    pandas_df = y_test.join(y_pred).toPandas()
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(x=pandas_df['LOS'], y=pandas_df['predicted'])
+    plt.title('Actual vs Predicted Values')
+    plt.xlabel('Actual Values')
+    plt.ylabel('Predicted Values')
+    plt.plot([pandas_df['LOS'].min(), pandas_df['LOS'].max()],
+             [pandas_df['LOS'].min(), pandas_df['LOS'].max()], 'm--')
+    plt.show()
 
-    # Explode the disease codes to analyze their individual impact on LOS
-    df_exploded = df_aliased.selectExpr("explode({}) as Disease".format(disease_col), los_col)
 
-    # Calculate average LOS for each disease
-    avg_los_by_disease = df_exploded.groupBy("Disease").agg(avg(los_col).alias("Avg_LOS"))
+def plot_line(y_test, y_pred):
+    pandas_df = y_test.join(y_pred).toPandas().sort_values(by='LOS')
+    plt.figure(figsize=(10, 6))
+    plt.plot(pandas_df['LOS'], label='LOS Values', marker='o')
+    plt.plot(pandas_df['predicted'], label='Predicted Values', marker='x')
+    plt.title('Line Comparison of Actual and Predicted Values')
+    plt.xlabel('Index')
+    plt.ylabel('Values')
+    plt.legend()
+    plt.show()
 
-    # Get max and min LOS for scaling
-    max_los = avg_los_by_disease.agg({"Avg_LOS": "max"}).collect()[0][0]
-    min_los = avg_los_by_disease.agg({"Avg_LOS": "min"}).collect()[0][0]
 
-    # Define a UDF to scale LOS to a risk score from 1 to 10
-    def scale_los_to_risk(los):
-        return 1 + int((los - min_los) / (max_los - min_los) * 9) if max_los > min_los else 1
-
-    scale_los_to_risk_udf = udf(scale_los_to_risk, IntegerType())
-
-    # Apply the UDF to calculate risk scores
-    risk_scores = avg_los_by_disease.withColumn("Risk_Score", scale_los_to_risk_udf(col("Avg_LOS")))
-
-    # Join the risk scores back with the exploded DataFrame to assign scores to each disease
-    df_with_risk = df_exploded.join(risk_scores, "Disease")
-
-    # Group by original DataFrame IDs and calculate average risk score
-    df_risk_value = df_with_risk.groupBy(df_aliased.columns).agg(avg("Risk_Score").alias("RISK_VALUE"))
-
-    # Drop the disease code column and return the result
-    result_df = df_risk_value.drop(disease_col)
-
-    return result_df
-"""
+def plot_density(y_test, y_pred):
+    pandas_df = y_test.join(y_pred).toPandas()
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(pandas_df['LOS'], label='Actual Values', fill=True)
+    sns.kdeplot(pandas_df['predicted'], label='Predicted Values', fill=True)
+    plt.title('Density Plot of Actual and Predicted Values')
+    plt.xlabel('Values')
+    plt.legend()
+    plt.show()
