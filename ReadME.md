@@ -1,23 +1,20 @@
-# AlphaZero
-Assignment for Laboratory of Artificial Intelligence and Data Science Class, 3º Year,2º Semester, Bachelor in Artificial Intelligence and Data Science Project 2 – Develop an Alpha Zero Ataxx Player
+# ICU Length of Stay Prediction
+Assignment for Laboratory of Large Scale Data Science Class, 3º Year,2º Semester, Bachelor in Artificial Intelligence and Data Science
 
 # Summary
 
-In this project our goal is to implement an AlphaZero player for the game Ataxx and for the game Go.
+In this project our goal is to predict the length of Stay of patients in ICU (Intensive Care Unit) using the MIMIC-III dataset. 
 
-The AlphaZero algorithm is a reinforcement learning algorithm
-that uses a neural network to approximate the value function and the policy function.
-The neural network is trained using self-play and Monte Carlo Tree Search.
 
-**Autores**:
+**Authors**:
 - [Sebastião Santos Lessa](https://github.com/seblessa/)
 - [Margarida Vila Chã](https://github.com/margaridavc/)
 
 # Versões
 
 The versions of the operating systems used to develop and test this application are:
-- Fedora 38
-- macOS Sonoma 14.0
+- Fedora 40
+- macOS Sonoma 14.5
 
 Python Versions:
 - 3.11.9
